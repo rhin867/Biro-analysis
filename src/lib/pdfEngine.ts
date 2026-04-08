@@ -3,6 +3,7 @@ export interface ParsedQuestion {
   qNumber: number
   imageUrl: string // Base64 data URL
   subject?: string
+  extractedText?: string
 }
 
 export async function parsePdfToCbt(
@@ -26,7 +27,9 @@ export async function parsePdfToCbt(
           throw new Error('Invalid PDF file contents.')
         }
 
-        const pdfjsLib = await import('pdfjs-dist')
+        // Dynamically import pdf.js to avoid SSR and Vercel build issues
+        // @ts-ignore: Next.js module path typing workaround for worker min
+        const pdfjsLib = await import('pdfjs-dist/build/pdf.min.mjs')
         if (!pdfjsLib?.GlobalWorkerOptions) {
           throw new Error('PDF.js worker configuration is unavailable.')
         }
@@ -60,13 +63,19 @@ export async function parsePdfToCbt(
           }
           await page.render(renderContext).promise
 
+          // Extract text for structural JSON feed
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items.map((item: any) => item.str).join(' ')
+
           const imgDataUrl = canvas.toDataURL('image/jpeg', 0.8)
 
+          // Simple heuristic logic can be added here if needed, keeping it mixed initially
           allQuestions.push({
             id: `q_${Date.now()}_${i}`,
             qNumber: i,
             imageUrl: imgDataUrl,
             subject: 'MIXED',
+            extractedText: pageText
           })
         }
 

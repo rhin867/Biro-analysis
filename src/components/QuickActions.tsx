@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { FlaskConical, BookOpen, Brain, FileText, Zap, RefreshCw } from 'lucide-react'
 
 const ACTIONS = [
-  { icon: FlaskConical, label: 'Start New Test', href: '/test/new', color: 'from-blue-500 to-blue-700', glow: 'glow-blue', desc: 'Record analysis' },
+  { icon: FlaskConical, label: 'Start New Test', href: '/upload', color: 'from-blue-500 to-blue-700', glow: 'glow-blue', desc: 'Record analysis' },
   { icon: BookOpen, label: 'Mistake Book', href: '/mistakes', color: 'from-violet-500 to-violet-700', glow: 'glow-purple', desc: '12 pending review' },
   { icon: Brain, label: 'AI Action Plan', href: '/plan', color: 'from-emerald-500 to-teal-600', glow: 'glow-green', desc: 'Get 3-day plan' },
-  { icon: RefreshCw, label: 'Revision Queue', href: '/revision', color: 'from-amber-500 to-orange-600', glow: 'glow-yellow', desc: '8 due today' },
-  { icon: FileText, label: 'Export Report', href: '/report', color: 'from-cyan-500 to-blue-600', glow: 'glow-cyan', desc: 'Download PDF' },
-  { icon: Zap, label: 'Score Simulator', href: '/simulator', color: 'from-pink-500 to-red-600', glow: '', desc: 'What-if analysis' },
+  { icon: RefreshCw, label: 'Revision Queue', href: '/blunders', color: 'from-amber-500 to-orange-600', glow: 'glow-yellow', desc: '8 due today' },
+  { icon: FileText, label: 'Export Report', href: '/behavioral', color: 'from-cyan-500 to-blue-600', glow: 'glow-cyan', desc: 'Download PDF' },
+  { icon: Zap, label: 'Score Simulator', href: '/chronometrics', color: 'from-pink-500 to-red-600', glow: '', desc: 'What-if analysis' },
 ]
 
 export function QuickActions() {
