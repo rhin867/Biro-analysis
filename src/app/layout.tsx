@@ -6,31 +6,39 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Biro-Analysis | JEE & NEET Test Intelligence Platform",
-  description:
-    "Revolutionary AI-powered test analysis engine for JEE and NEET aspirants. Track 50+ behavioral metrics, detect hesitation patterns, blunders, and generate personalized action plans.",
-  keywords: "JEE analysis, NEET analysis, test tracker, behavioral analysis, study plan",
+  title: "Biro-Analysis | Neural Exam Platform",
+  description: "High-performance test intelligence for JEE/NEET aspirants. Level 4 Behavioral Metrics.",
+  keywords: "JEE, NEET, Behavioral Analysis, Chronometrics",
   authors: [{ name: "Biro-Analysis" }],
-  openGraph: {
-    title: "Biro-Analysis",
-    description: "The most advanced JEE/NEET test analysis platform",
-    type: "website",
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth bg-[#020617]">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.variable} font-sans antialiased bg-[#0F172A] text-white`}>
-        {children}
+      <body className={`${inter.variable} font-mono antialiased bg-[#020617] text-white`}>
+        {/* Onboarding Zero-Data Logic */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              if (!localStorage.getItem('biro_init_v4')) {
+                localStorage.clear();
+                localStorage.setItem('biro_init_v4', Date.now());
+                console.log('--- Neural_Layer_Initialized: Zero_Data_State ---');
+              }
+            } catch (e) {}
+          })();
+        `}} />
+        <div className="relative min-h-screen">
+          {children}
+        </div>
         <Toaster />
       </body>
     </html>

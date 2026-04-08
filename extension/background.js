@@ -1,11 +1,17 @@
 /**
  * BIRO-ANALYSIS CHROME EXTENSION
  * Background Service Worker (Manifest V3)
- * Persistent sync gateway for dashboard integration
+ * Optimized for local & production sync detection
  */
 
 let activeSession = null
-const DASHBOARD_URL = 'http://localhost:3000' // Should be dynamic in production
+let currentBaseUrl = 'http://localhost:3000'
+
+// Detect site to determine sync target
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tab.url?.includes('localhost')) currentBaseUrl = 'http://localhost:3000'
+  else if (tab.url?.includes('vercel.app')) currentBaseUrl = 'https://biro-analysis.vercel.app'
+})
 
 // ─── Messaging ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -44,7 +50,7 @@ async function handleStartSession(payload, sendResponse) {
 async function handleStopSession(payload, sendResponse) {
   if (activeSession) {
     activeSession.isActive = false
-    await syncEvents(true) // Final flush
+    await syncEvents(true)
     await chrome.storage.local.set({ lastSession: activeSession })
     activeSession = null
   }
@@ -65,10 +71,10 @@ async function syncEvents(isFinal = false) {
   
   if (!session || eventBuffer.length === 0) return { ok: true, synced: 0 }
 
-  console.log(`[BiroSync] Attempting to push ${eventBuffer.length} events...`)
+  console.log(`[BiroSync] Pushing to ${currentBaseUrl}/api/sync...`)
 
   try {
-    const response = await fetch(`${DASHBOARD_URL}/api/sync`, {
+    const response = await fetch(`${currentBaseUrl}/api/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,23 +87,17 @@ async function syncEvents(isFinal = false) {
 
     const result = await response.json()
     if (result.ok) {
-      // Clear synced events from buffer
       await chrome.storage.local.set({ eventBuffer: [] })
-      console.log(`[BiroSync] Successfully synced ${result.ingested} events ✓`)
       return { ok: true, synced: result.ingested }
-    } else {
-      console.error('[BiroSync] Sync Failed:', result.error)
-      return { ok: false, error: result.error }
     }
+    return { ok: false, error: result.error }
   } catch (err) {
-    console.error('[BiroSync] Network Error:', err)
-    return { ok: false, error: 'OFFLINE_OR_GATEWAY_DOWN' }
+    return { ok: false, error: 'GATEWAY_UNREACHABLE' }
   }
 }
 
-// ─── Alarms ──────────────────────────────────────────────────
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'biroSync') syncEvents()
 })
 
-console.log('[Biro-Analysis] Persistence worker initialized ✓')
+console.log('[Biro-Analysis] persistence Worker Activated ✓ Target:', currentBaseUrl)
