@@ -1,91 +1,123 @@
+// BIRO-ANALYSIS PDF ENGINE v2.5
+// Enhanced for text-block segmentation and SSR/Vercel persistence
+
 export interface ParsedQuestion {
   id: string
   qNumber: number
-  imageUrl: string // Base64 data URL
-  subject?: string
-  extractedText?: string
+  imageUrl: string // Base64 snapshot
+  subject: string
+  extractedText: string
+  options?: string[]
 }
 
+/**
+ * Main parser entry point using pdfjs-dist
+ * Extracts high-res images and segments text into logical question blocks
+ */
 export async function parsePdfToCbt(
   file: File,
   onProgress: (msg: string, pct: number) => void
 ): Promise<ParsedQuestion[]> {
-  if (typeof window === 'undefined' || typeof document === 'undefined' || typeof FileReader === 'undefined') {
-    throw new Error('PDF parsing is only supported in the browser.')
-  }
+  if (typeof window === 'undefined') throw new Error('Client-side execution required.')
 
   return new Promise((resolve, reject) => {
-    onProgress('Loading PDF Engine...', 5)
+    onProgress('CALIBRATING_ENGINE', 5)
 
-    const fileReader = new FileReader()
-    fileReader.onerror = () => reject(new Error('Failed to read the uploaded PDF file.'))
-
-    fileReader.onload = async function (e) {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('FAIL_READ: IO_ERROR'))
+    
+    reader.onload = async (e) => {
       try {
-        const arrayBuffer = e.target?.result
-        if (!(arrayBuffer instanceof ArrayBuffer)) {
-          throw new Error('Invalid PDF file contents.')
-        }
+        const data = e.target?.result
+        if (!(data instanceof ArrayBuffer)) throw new Error('FAIL_DATA: INVALID_BUFFER')
 
-        // Dynamically import pdf.js to avoid SSR and Vercel build issues
-        // @ts-ignore: Next.js module path typing workaround for worker min
-        const pdfjsLib = await import('pdfjs-dist/build/pdf.min.mjs')
-        if (!pdfjsLib?.GlobalWorkerOptions) {
-          throw new Error('PDF.js worker configuration is unavailable.')
-        }
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.6.205/pdf.worker.min.js'
+        // Dynamic import with type suppression for SSR compatibility
+        // @ts-ignore
+        const pdfjs = await import('pdfjs-dist/build/pdf.min.mjs')
+        
+        // Critical: Using cdnjs worker for absolute stability in Vercel production
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`
 
-        const typedarray = new Uint8Array(arrayBuffer)
-        const pdf = await pdfjsLib.getDocument(typedarray).promise
-
+        const loadingTask = pdfjs.getDocument({ data })
+        const pdf = await loadingTask.promise
         const numPages = pdf.numPages
-        onProgress(`Found ${numPages} pages. Initializing extraction...`, 15)
+        
+        onProgress(`GRID_LOADED: ${numPages} PAGES`, 15)
 
-        const allQuestions: ParsedQuestion[] = []
+        const questions: ParsedQuestion[] = []
         const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          throw new Error('Unable to create a rendering context for PDF extraction.')
-        }
+        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true })
+        if (!ctx) throw new Error('FAIL_CTX: CANVAS_ALLOCATION_FAIL')
+
+        // HEURISTIC: Question detection regex (Common patterns in JEE Mocks)
+        const qRegex = /(?:\n|^)\s*(?:Q\.?\s*)?(\d+)\s*[\.\)\]]/g
 
         for (let i = 1; i <= numPages; i++) {
-          onProgress(`Parsing page ${i} / ${numPages}...`, 15 + Math.round((i / numPages) * 70))
-
+          onProgress(`SEGMENTING_NODE: PAGE_${i}/${numPages}`, 15 + Math.floor((i / numPages) * 75))
+          
           const page = await pdf.getPage(i)
-          const viewport = page.getViewport({ scale: 2.0 })
+          const viewport = page.getViewport({ scale: 2.0 }) // High density for mobile/Kiwi
 
           canvas.height = viewport.height
           canvas.width = viewport.width
 
-          const renderContext: any = {
-            canvasContext: ctx,
-            viewport,
-          }
-          await page.render(renderContext).promise
+          // Render Page to Canvas
+          await page.render({ canvasContext: ctx, viewport }).promise
 
-          // Extract text for structural JSON feed
+          // Text Layer Extraction
           const textContent = await page.getTextContent()
-          const pageText = textContent.items.map((item: any) => item.str).join(' ')
+          const rawText = textContent.items.map((it: any) => it.str).join(' ')
+          
+          // Image data for the question block
+          const imgData = canvas.toDataURL('image/jpeg', 0.85)
 
-          const imgDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+          // Detect Question IDs in text
+          let match
+          const detectedNums: number[] = []
+          while ((match = qRegex.exec(rawText)) !== null) {
+            detectedNums.push(parseInt(match[1]))
+          }
 
-          // Simple heuristic logic can be added here if needed, keeping it mixed initially
-          allQuestions.push({
-            id: `q_${Date.now()}_${i}`,
-            qNumber: i,
-            imageUrl: imgDataUrl,
-            subject: 'MIXED',
-            extractedText: pageText
-          })
+          // Subject Assignment Mapping (JEE Standard Heuristic)
+          let subject = 'MIXED'
+          if (i <= Math.ceil(numPages / 3)) subject = 'PHYSICS'
+          else if (i <= Math.ceil(2 * numPages / 3)) subject = 'CHEMISTRY'
+          else subject = 'MATHEMATICS'
+
+          // Create question nodes
+          if (detectedNums.length === 0) {
+            questions.push({
+              id: `q_${Date.now()}_p${i}`,
+              qNumber: i,
+              imageUrl: imgData,
+              subject,
+              extractedText: rawText.slice(0, 1000)
+            })
+          } else {
+            detectedNums.forEach((num, idx) => {
+              questions.push({
+                id: `q_${Date.now()}_p${i}_n${num}`,
+                qNumber: num,
+                imageUrl: imgData, 
+                subject,
+                extractedText: rawText.slice(idx * 500, (idx + 1) * 500)
+              })
+            })
+          }
         }
 
-        onProgress('Extraction complete! Finalizing payload...', 100)
-        resolve(allQuestions)
-      } catch (err) {
-        reject(err)
+        // Deduplicate and Sort
+        const final = questions
+          .filter((v, i, a) => a.findIndex(t => t.qNumber === v.qNumber) === i)
+          .sort((a, b) => a.qNumber - b.qNumber)
+
+        onProgress(`SYNTHESIS_SUCCESS: ${final.length} NODES`, 100)
+        resolve(final)
+      } catch (err: any) {
+        reject(new Error(`ENGINE_CRASH: ${err.message}`))
       }
     }
 
-    fileReader.readAsArrayBuffer(file)
+    reader.readAsArrayBuffer(file)
   })
 }

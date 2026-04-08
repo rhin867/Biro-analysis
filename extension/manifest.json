@@ -1,20 +1,31 @@
 {
   "manifest_version": 3,
-  "name": "Biro-Analysis Tracker",
+  "name": "Biro-Analysis: Neural Tracker",
   "version": "1.0.0",
-  "description": "Invisible test tracker for JEE/NEET aspirants. Records mouse, click, and timing data during online tests.",
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
+  "description": "High-performance behavioral analytics for JEE/NEET aspirants. Level 4 Tracking.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "scripting",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://biro-analysis.vercel.app/*",
+    "*://*.nta.ac.in/*",
+    "*://*.nta.nic.in/*",
+    "*://*.allenbpms.in/*",
+    "*://*.pw.live/*",
+    "*://*.unacademy.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
-      "48": "icons/icon48.png"
-    },
-    "default_title": "Biro-Analysis"
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "background.js",
@@ -24,25 +35,15 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle",
-      "all_frames": false
+      "run_at": "document_idle"
     }
   ],
-  "permissions": [
-    "storage",
-    "tabs",
-    "activeTab",
-    "scripting",
-    "alarms",
-    "notifications"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["widget.html", "widget.css", "icons/*"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }
