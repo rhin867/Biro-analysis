@@ -159,6 +159,24 @@ export interface BehavioralAnalysis {
   option_change_rate?: number
   option_change_helped?: number
   option_change_hurt?: number
+  review_roi?: number
+  avg_time_per_question_sec?: number
+  avg_time_per_subject?: Record<string, number>
+  time_correct_sec?: number
+  time_incorrect_sec?: number
+  time_skipped_sec?: number
+  fast_incorrect_count?: number
+  first_hour_accuracy?: number
+  last_hour_accuracy?: number
+  fatigue_index?: number
+  difficulty_hit_rate?: Record<string, number>
+  attempt_rate?: number
+  weak_concept_clusters?: string[]
+  blind_spot_chapters?: string[]
+  subject_switch_map?: Record<string, number>
+  positive_marks?: number
+  negative_marks?: number
+  analysis_version?: string
   score_potential?: number
   ai_action_plan?: ActionPlan
   analyzed_at: string
